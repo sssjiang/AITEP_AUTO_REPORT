@@ -1,8 +1,10 @@
 import utils.Pubmed as Pubmed
 import json
-from utils.WebSearch import SearchWithCache
-searcher = SearchWithCache(cache_path="./cached")
+# from utils.WebSearch import SearchWithCache
+# searcher = SearchWithCache(cache_path="./cached")
+from utils.perplexity_AI_search import PerplexityWithCache
 from utils.llm_utils import AITEP
+perplexity_api = PerplexityWithCache()
 ai = AITEP()
 def get_chemical_info(name):
     """
@@ -23,12 +25,17 @@ def get_chemical_info(name):
         "CAS Number": "None",
         "Molecular Formula": "None",
         "Molecular Weight": "None",
-        "SMILES": "None",
-        "InChI": "None",
-        "InChIKey": "None",
+        "Smiles": "None",
+        "InchI Key": "None",
         "reference_links": ["None"],
         "AI_search_results": "",
-        "GAI_original": ""
+        "GAI_original": "",
+        "IUPAC Name": "None",
+        "Description": "None",
+        "ATC Code": "None",
+        "Pharmacotherapeutic Group": "None",
+        "Appearance": "None",
+        "Solubility": "None",
     }
     
     try:
@@ -37,8 +44,8 @@ def get_chemical_info(name):
         pubmed_result = json.loads(json_data) if isinstance(json_data, str) else json_data
         
         # 如果PubMed返回错误，尝试使用网络搜索
-        if pubmed_result.get('status') == 'error':
-            return _search_chemical_info(name, result)
+        # if pubmed_result.get('status') == 'error':
+        return _search_chemical_info(name, result)
         
         # 将PubMed结果合并到我们的结果结构中
         if isinstance(pubmed_result, dict):
@@ -72,10 +79,11 @@ def _search_chemical_info(name, default_result):
     """
     try:
         # 构建搜索提示
-        search_prompt = f'请搜索{name}的基本信息 Chemical Name, Synonyms, CAS Number, Molecular Formula, Molecular Weight, SMILES, InChI, InChIKey, IUPAC Name'
+        search_prompt = f'search drug {name} basic information: Synonyms, CAS Number, Molecular Formula, Molecular Weight, Smiles, InchI Key, IUPAC Name, Description, ATC Code, Pharmacotherapeutic Group, Appearance, Solubility'
         
         # 执行搜索
-        json_data = searcher.search(search_prompt)
+        # json_data = searcher.search(search_prompt)
+        json_data = perplexity_api.search(search_prompt)
         data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
         default_result["AI_search_results"] = data_dict
         # 如果搜索有结果，使用AI处理
@@ -99,14 +107,19 @@ def _search_chemical_info(name, default_result):
                 ```json
                 {
                     "drug_name": "None",
-                    "Synonyms": "None",
+                    "Synonyms": ["None"],
                     "CAS Number": "None",
                     "Molecular Formula": "None",
                     "Molecular Weight": "None",
-                    "SMILES": "None",
-                    "InChI": "None",
-                    "InChIKey": "None",
-                    "reference_links":["None"]
+                    "Smiles": "None",
+                    "InchI Key": "None",
+                    "reference_links":["None"],
+                    "IUPAC Name": "None",
+                    "Description": "None",
+                    "ATC Code": "None",
+                    "Pharmacotherapeutic Group": "None",
+                    "Appearance": "None",
+                    "Solubility": "None",
                 }
                 ```
                 """
@@ -148,4 +161,4 @@ def _search_chemical_info(name, default_result):
     return json.dumps(default_result, ensure_ascii=False)
 
 if __name__ == "__main__":
-    print(get_chemical_info("Abacavir"))
+    print(get_chemical_info("Turpentine Oil"))
