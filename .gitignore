@@ -1,0 +1,11 @@
+# 首先忽略所有文件
+*
+*.*
+# 然后只允许 Python 文件
+!*.py
+!*.ipynb
+# 如果您想提交 .gitignore 文件本身
+!.gitignore
+# 如果您想提交 README 文件
+!README.md
+
