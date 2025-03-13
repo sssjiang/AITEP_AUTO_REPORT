@@ -1,4 +1,4 @@
-import utils.Pubmed as Pubmed
+import utils.PubChem as PubChem
 import json
 # from utils.WebSearch import SearchWithCache
 # searcher = SearchWithCache(cache_path="./cached")
@@ -40,7 +40,7 @@ def get_chemical_info(name):
     
     try:
         # 首先尝试使用PubMed获取信息
-        json_data = Pubmed.process_chemical(name)
+        json_data = PubChem.process_chemical(name)
         pubmed_result = json.loads(json_data) if isinstance(json_data, str) else json_data
         
         # 将PubMed结果合并到我们的结果结构中
