@@ -139,11 +139,9 @@ def clinical(ingredient, route):
         str: 包含处理结果的JSON字符串
     """
     result = {
-        "ingredient": ingredient,
-        "route": route,
+        "ingredient": "",
+        "route": "",
         "new_generate_content": "",
-        "new_ingredients": "",
-        "new_route": "",
         "dosage_detail": "",
         "new_citation": "",
         "status": "success",
@@ -166,8 +164,8 @@ def clinical(ingredient, route):
         
         # 填充结果字段
         result["new_generate_content"] = write_to_database(content_json.get("result", ""))
-        result["new_ingredients"] = content_json.get("ingredients", "")
-        result["new_route"] = content_json.get("route", "")
+        result["ingredient"] = content_json.get("ingredients", "")
+        result["route"] = content_json.get("route", "")
         result["dosage_detail"] = content_json.get("dosage_detail", "")
         result["new_citation"] = api_result.get("citations", "")
         result["original_GAI"] = result_json

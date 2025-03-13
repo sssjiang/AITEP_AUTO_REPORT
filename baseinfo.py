@@ -17,25 +17,25 @@ def get_chemical_info(name):
         str: 包含化学物质信息的JSON字符串
     """
     # 默认结果结构
-    result = {
+    default_result = {
         "status": "success",
         "message": "",
-        "drug_name": "None",
-        "Synonyms": "None",
-        "CAS Number": "None",
-        "Molecular Formula": "None",
-        "Molecular Weight": "None",
-        "Smiles": "None",
-        "InchI Key": "None",
-        "reference_links": ["None"],
+        "drug_name": "",
+        "Synonyms": "",
+        "CAS Number": "",
+        "Molecular Formula": "",
+        "Molecular Weight": "",
+        "Smiles": "",
+        "InchI Key": "",
+        "reference_links": "",  
         "AI_search_results": "",
         "GAI_original": "",
-        "IUPAC Name": "None",
-        "Description": "None",
-        "ATC Code": "None",
-        "Pharmacotherapeutic Group": "None",
-        "Appearance": "None",
-        "Solubility": "None",
+        "IUPAC Name":"",
+        "Description": "",
+        "ATC Code": "",
+        "Pharmacotherapeutic Group": "",
+        "Appearance": "",
+        "Solubility": "",
     }
     
     try:
@@ -43,27 +43,31 @@ def get_chemical_info(name):
         json_data = Pubmed.process_chemical(name)
         pubmed_result = json.loads(json_data) if isinstance(json_data, str) else json_data
         
-        # 如果PubMed返回错误，尝试使用网络搜索
-        # if pubmed_result.get('status') == 'error':
-        return _search_chemical_info(name, result)
-        
         # 将PubMed结果合并到我们的结果结构中
-        if isinstance(pubmed_result, dict):
-            # 保留status和message字段
-            result["status"] = pubmed_result.get("status", "success")
-            result["message"] = pubmed_result.get("message", "")
+        if pubmed_result.get("status") == "success":
             # 更新化学物质信息字段
-            for key in result.keys():
+            for key in pubmed_result.keys():
                 if key not in ["status", "message"] and key in pubmed_result:
-                    result[key] = pubmed_result[key]
-        
+                    default_result[key] = pubmed_result[key]
+    
+         # 检查是否有空缺的值("")
+        has_missing_values = False
+        for key, value in default_result.items():
+            if key not in ["status", "message", "AI_search_results", "GAI_original"] and value == "":
+                has_missing_values = True
+                break
+        # 如果有空缺的值，使用搜索补充
+        if has_missing_values:
+            search_result=_search_chemical_info(name, default_result)
+            if search_result.get("status") == "success":
+                default_result = search_result
     except Exception as e:
         # 处理任何异常，尝试备用方法
         print(f"Error in PubMed process: {str(e)}")
-        return _search_chemical_info(name, result)
-    
+        default_result["status"] = "error"
+        default_result["message"] = f"Error in PubMed process: {str(e)}"
     # 返回JSON字符串
-    return json.dumps(result, ensure_ascii=False)
+    return json.dumps(default_result, ensure_ascii=False)
 
 # AI搜索
 def _search_chemical_info(name, default_result):
@@ -79,7 +83,9 @@ def _search_chemical_info(name, default_result):
     """
     try:
         # 构建搜索提示
-        search_prompt = f'search drug {name} basic information: Synonyms, CAS Number, Molecular Formula, Molecular Weight, Smiles, InchI Key, IUPAC Name, Description, ATC Code, Pharmacotherapeutic Group, Appearance, Solubility'
+        search_prompt = f"""
+        search comprehensive drug profile for {name} including official identifiers (CAS, SMILES, InChI Key), chemical properties (formula, molecular weight, IUPAC name), pharmaceutical characteristics (appearance, solubility), and clinical information (ATC code, therapeutic group, indications, pharmacokinetics).
+        """
         
         # 执行搜索
         # json_data = searcher.search(search_prompt)
@@ -90,39 +96,37 @@ def _search_chemical_info(name, default_result):
         if data_dict and len(data_dict) > 0:
             # 构建AI提示
             prompt_template = """
-                Content Start
-                ```json
-                {{RESULTS}}
-                ```
-                Content End
+Content Start
+```json
+{{RESULTS}}
+```
+Content End
 
-                 Based on the search results in JSON format above, extract the basic  information for drug name (`drug_name`) with the following requirements:
+Based on the search results in JSON format above, extract the basic information for drug name (`drug_name`). Only include fields with actual values; use empty strings or empty arrays for missing information.
 
-                Input:
-                - `drug_name`: {{DRUG_NAME}}
+Input:
+- `drug_name`: {{DRUG_NAME}}
 
-                Requirements:
-                - Only analyze and extract info based on the content between **Content Start** and **Content End**
-                - When the content between **Content Start** and **Content End** does not contain information about `drug_name`, directly output the following content and ignore subsequent instructions:
-                ```json
-                {
-                    "drug_name": "None",
-                    "Synonyms": ["None"],
-                    "CAS Number": "None",
-                    "Molecular Formula": "None",
-                    "Molecular Weight": "None",
-                    "Smiles": "None",
-                    "InchI Key": "None",
-                    "reference_links":["None"],
-                    "IUPAC Name": "None",
-                    "Description": "None",
-                    "ATC Code": "None",
-                    "Pharmacotherapeutic Group": "None",
-                    "Appearance": "None",
-                    "Solubility": "None",
-                }
-                ```
-                """
+Expected output format:
+```json
+{
+    "drug_name": "Paracetamol",
+    "Synonyms": ["Acetaminophen", "APAP", "Tylenol"],
+    "CAS Number": "103-90-2",
+    "Molecular Formula": "C8H9NO2",
+    "Molecular Weight": "151.16 g/mol",
+    "Smiles": "CC(=O)NC1=CC=C(O)C=C1",
+    "InchI Key": "RZVAJINKPMORJF-UHFFFAOYSA-N",
+    "reference_links": ["https://pubchem.ncbi.nlm.nih.gov/compound/1983"],
+    "IUPAC Name": "N-(4-hydroxyphenyl)acetamide",
+    "Description": "Analgesic and antipyretic drug used for pain relief and fever reduction",
+    "ATC Code": "N02BE01",
+    "Pharmacotherapeutic Group": "Analgesics and antipyretics",
+    "Appearance": "White crystalline powder",
+    "Solubility": "Slightly soluble in water (14 mg/mL at 25°C)"
+}
+```
+"""
             
             # 替换提示中的占位符
             formatted_prompt = prompt_template.replace("{{DRUG_NAME}}", name)
@@ -131,25 +135,12 @@ def _search_chemical_info(name, default_result):
             # 调用AI处理
             ai_response = ai.run_llm(file_id=None, llm_model="qwen-plus", prompt=formatted_prompt)
             default_result["GAI_original"] = ai_response
-          
-            # 提取结果
-            if isinstance(ai_response, dict):
-                # 更新化学物质信息字段，保留status和message
-                ai_response=ai_response.get("data")
-                for key in ai_response:
-                    if key in default_result and key not in ["status", "message"]:
-                        default_result[key] = ai_response[key]
-            elif isinstance(ai_response, str):
-                try:
-                    parsed_response = json.loads(ai_response)
-                    # 更新化学物质信息字段，保留status和message
-                    ai_response=ai_response.get("data")
-                    for key in parsed_response:
-                        if key in default_result and key not in ["status", "message"]:
-                            default_result[key] = parsed_response[key]
-                except:
-                    default_result["status"] = "error"
-                    default_result["message"] = f"Failed to parse AI response for {name}"
+ 
+            # 更新空缺的值
+            ai_response=ai_response.get("data")
+            for key in ai_response.keys():
+                if key not in ["status", "message"] and key in default_result and default_result[key] == "":
+                    default_result[key] = ai_response[key]
         else:
             default_result["message"] = f"{name}: No search results"
     
@@ -158,7 +149,7 @@ def _search_chemical_info(name, default_result):
         default_result["message"] = f"Error in search process: {str(e)}"
     
     # 返回JSON字符串
-    return json.dumps(default_result, ensure_ascii=False)
+    return default_result
 
 if __name__ == "__main__":
     print(get_chemical_info("Turpentine Oil"))

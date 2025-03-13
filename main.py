@@ -9,7 +9,7 @@ import F3
 import F4
 import F5
 import other_factors
-
+import calculate_a_factor
 class DrugProcessor:
     """药物信息处理类，封装了药物信息获取和分析的所有功能"""
     
@@ -51,9 +51,9 @@ class DrugProcessor:
                     "Solubility": data_dict.get('Solubility'),
                     "reference_links": data_dict.get('reference_links')
                 }
-            return self._handle_error(f"No chemical info found for {name}", None)
+            return self._handle_error(f"No chemical info found for {name}", {})
         except Exception as e:
-            return self._handle_error(f"Error getting chemical info: {str(e)}", None)
+            return self._handle_error(f"Error getting chemical info: {str(e)}", {})
     
     def get_pharmacokinetics(self, name):
         """获取药物的药代动力学信息"""
@@ -104,14 +104,16 @@ class DrugProcessor:
                     "reference_links": data_dict.get('new_citation')
                 }
                 dosage_detail = data_dict.get('dosage_detail')
+                new_route=data_dict.get('route')
                 
                 return {
                     "Clinical": output_data,
-                    "dosage_detail": dosage_detail
+                    "dosage_detail": dosage_detail,
+                    "route":new_route
                 }
-            return self._handle_error(f"No clinical info found for {name}", {"Clinical": {}, "dosage_detail": None})
+            return self._handle_error(f"No clinical info found for {name}", {})
         except Exception as e:
-            return self._handle_error(f"Error getting clinical info: {str(e)}", {"Clinical": {}, "dosage_detail": None})
+            return self._handle_error(f"Error getting clinical info: {str(e)}", {})
     
     def calculate_PoD(self, name, clinical, dosage_detail):
         """计算PoD值"""
@@ -132,49 +134,60 @@ class DrugProcessor:
     
     def calculate_factors(self, clinical, hazard, PoD_detail):
         """计算因子"""
+        def process_factor_result(json_data, factors_list):
+            """
+            处理因子计算的返回结果
+            
+            Args:
+                json_data: 因子计算函数返回的JSON数据
+                factors_list: 存储因子的列表 处理 F3, F4, F5 因子
+            """
+            data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
+            
+            if data_dict.get('status') == 'success':
+                factors_list.append({
+                    "factors": data_dict.get('factors'),
+                    "value": data_dict.get('value'),
+                    "rationale": data_dict.get('rationale')
+                })
         factors = []
         try:
             # 计算F3因子
             json_data = F3.F3_value(clinical)
-            data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
-            
-            if data_dict.get('status') == 'success':
-                factors.append({
-                    "factors": data_dict.get('factors'),
-                    "value": data_dict.get('value'),
-                    "rationale": data_dict.get('rationale')
-                })
+            process_factor_result(json_data, factors)
             
             # 计算F4因子
             json_data = F4.F4_value(clinical, hazard)
-            data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
-            
-            if data_dict.get('status') == 'success':
-                factors.append({
-                    "factors": data_dict.get('factors'),
-                    "value": data_dict.get('value'),
-                    "rationale": data_dict.get('rationale')
-                })
+            process_factor_result(json_data, factors)
             
             # 计算F5因子
             json_data = F5.F5_value(PoD_detail, clinical)
-            data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
+            process_factor_result(json_data, factors)
             
-            if data_dict.get('status') == 'success':
-                factors.append({
-                    "factors": data_dict.get('factors'),
-                    "value": data_dict.get('value'),
-                    "rationale": data_dict.get('rationale')
-                })
-            
-            # 添加其他因子
+            # 添加其他因子 F1, F2, F6, a
             other_factor_data = json.loads(other_factors.other_factors())
             factors.extend(other_factor_data)
             
             return factors
         except Exception as e:
-            return self._handle_error(f"Error calculating factors: {str(e)}", factors)
-    
+            return self._handle_error(f"Error calculating factors: {str(e)}", [])
+
+
+    def calculation_a_factor(self,name,new_route,route)->dict:
+        """计算α因子"""
+        try:
+            json_data = calculate_a_factor.a_factor(name,new_route,route)
+            data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
+            
+            if data_dict.get('status') == 'success':
+                return {
+                    "factors": data_dict.get('factors'),
+                    "value": data_dict.get('a_factor_value'),
+                    "rationale": data_dict.get('a_factor_detail')
+                }
+            return self._handle_error(f"Failed to calculate α factor", {})
+        except Exception as e:
+            return self._handle_error(f"Error calculating α factor: {str(e)}", {})
     def process_drug(self, name, route,APID,api_id):
         """
         处理药物的完整流程
@@ -200,14 +213,27 @@ class DrugProcessor:
             # 获取危害信息
             hazard_info = self.get_hazard_info(name)
             
-            # 获取PoD信息
+            # 获clinical文本信息不包含 link
             clinical_data = clinical_info.get('Clinical', {}).get('Clinical')
             dosage_detail = clinical_info.get('dosage_detail')
             PoD_info = self.calculate_PoD(name, clinical_data, dosage_detail)
-            
             # 计算因子
             factors = self.calculate_factors(clinical_data, hazard_info, PoD_info)
+            new_route=clinical_info.get('route')
             
+            if new_route.lower() != route.lower():
+                 # 重新计算 α 因子
+                a_factor = self.calculation_a_factor(name,new_route,route)
+                # 在factors列表中查找并更新α因子
+                for i, factor in enumerate(factors):
+                    if factor.get("factors") == "α":
+                        # 用新计算的α因子替换原来的值
+                        factors[i] = a_factor
+                        break
+                else:
+                    # 如果没有找到α因子，则添加到列表中
+                    factors.append(a_factor)
+
             # 构建结果
             result = {
                 "APID":APID,

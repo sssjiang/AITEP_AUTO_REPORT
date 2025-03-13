@@ -68,7 +68,7 @@ If neither explicit duration nor duration description is available, classify by 
 #### **Example Output**
 ```json
 {
-    "value": "5",
+    "value": 5,
     "rationale": "The study is a clinical study with a duration of 2 weeks, categorized as sub-chronic."
 }
 ```

@@ -23,15 +23,15 @@ def get_pharmacokinetics(name):
         "status": "success",
         "message": "",
         "Pharmacokinetics": {
-            "Absorption": "None",
-            "Distribution": "None",
-            "Metabolism": "None",
-            "Excretion": "None"
+            "Absorption": "",
+            "Distribution": "",
+            "Metabolism": "",
+            "Excretion": ""
         },
-        "Indication": "None",
-        "Pharmacodynamics": "None",
-        "Mechanism of Action": "None",
-        "reference_links": ["None"],
+        "Indication": "",
+        "Pharmacodynamics": "",
+        "Mechanism of Action": "",
+        "reference_links": "",
         "AI_search_results": "",
         "GAI_original": ""
     }
@@ -56,9 +56,7 @@ def get_pharmacokinetics(name):
                 if not json_data:
                     print(f"Empty search result for {search_prompt}")
                     continue
-                    
                 data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
-                
                 if data_dict:
                     contents.append({"keyword": keyword, "data": data_dict})
                 else:
@@ -71,37 +69,35 @@ def get_pharmacokinetics(name):
         if contents:
             # 构建AI提示
             prompt_template = """
-                Content Start
-                ```json
-                {{RESULTS}}
-                ```
-                Content End
+Content Start
+```json
+{{RESULTS}}
+```
+Content End
 
-                 Based on the search results in JSON format above, extract the basic  information for drug name (`drug_name`) with the following requirements:
+Based on the search results in JSON format above, extract the basic information for drug name (`drug_name`) with the following requirements:
 
-                Input:
-                - `drug_name`: {{DRUG_NAME}}
+Input:
+- `drug_name`: {{DRUG_NAME}}
 
-                Requirements:
-                - Only analyze and extract info based on the content between **Content Start** and **Content End**
-                - When the content between **Content Start** and **Content End** does not contain information about `drug_name`, directly output the following content and ignore subsequent instructions:
-                ```json
-                {
-                    "status": "success",
-                    "message": "",
-                    "drug_name": "{{DRUG_NAME}}",
-                    "Pharmacokinetics": {
-                        "Absorption": "None",
-                        "Distribution": "None",
-                        "Metabolism": "None",
-                        "Excretion": "None"
-                    },
-                    "Indication": "None",
-                    "Pharmacodynamics": "None",
-                    "Mechanism of Action": "None",
-                    "reference_links": ["None"]
-                }
-                ```
+Requirements:
+- Only analyze and extract info based on the content between **Content Start** and **Content End**
+- When the content between **Content Start** and **Content End** does not contain information about `drug_name`, directly output the following content and ignore subsequent instructions:
+```json
+{
+    "drug_name": "Ibuprofen",
+    "Pharmacokinetics": {
+        "Absorption": "Rapidly absorbed from the gastrointestinal tract with peak plasma concentrations occurring within 2 hours",
+        "Distribution": "Distributed throughout most body tissues with a volume of distribution of approximately 0.9 L/kg",
+        "Metabolism": "Primarily metabolized in the liver via glucuronidation and sulfation pathways",
+        "Excretion": "Excreted in urine as metabolites with an elimination half-life of 2-3 hours"
+    },
+    "Indication": "Treatment of mild to moderate pain and fever",
+    "Pharmacodynamics": "Produces analgesia by inhibition of prostaglandin synthesis in the central nervous system and peripherally blocks pain impulse generation",
+    "Mechanism of Action": "Selective inhibitor of cyclooxygenase (COX) enzymes with predominant effects on COX-2", 
+    "reference_links": ["https://pubchem.ncbi.nlm.nih.gov/compound/Ibuprofen", "https://www.drugbank.ca/drugs/DB01050"]
+}
+```
                 """
             
             # 替换提示中的占位符
@@ -112,23 +108,10 @@ def get_pharmacokinetics(name):
             ai_response = ai.run_llm(file_id=None, llm_model="qwen-plus", prompt=formatted_prompt)
             default_result["GAI_original"] = ai_response
             # 处理AI响应
-            if isinstance(ai_response, dict):
-                if 'data' in ai_response:
-                    # 确保返回的数据包含所需字段
-                    result = ai_response.get('data', {})
-                    for key in result:
-                        if key in default_result:
-                            default_result[key] = result[key]
-                else:
-                    pass
-
-            elif isinstance(ai_response, str):
-                try:
-                    # 尝试解析JSON字符串
-                    pass
-                except json.JSONDecodeError:
-                    default_result["status"] = "error"
-                    default_result["message"] = f"Failed to parse AI response for {name}"
+            # 确保返回的数据包含所需字段
+            result = ai_response.get('data', {})
+            for key in result:
+                default_result[key] = result[key]
         else:
             default_result["status"] = "error"
             default_result["message"] = f"No search results found for {name}"
