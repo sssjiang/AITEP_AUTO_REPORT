@@ -3,7 +3,7 @@ import json
 import hashlib
 import requests
 import configparser
-
+import re
 class BaseSearchWithCache:
     """搜索引擎的基类，提供缓存功能"""
     
@@ -206,6 +206,66 @@ class PerplexitySearch(BaseSearchWithCache):
                 "query": query
             }
             return json.dumps(error_result, ensure_ascii=False)
+    # 扩展功能，只针对Perplexity API 响应结果进行解析
+    @staticmethod
+    def extract_json_data(json_string):
+
+        try:
+            
+            data = json.loads(json_string) if isinstance(json_string, str) else json_string
+            # 提取所需信息
+            model = data.get("model", "")
+            citations = data.get("citations", [])
+            # 提取所有content
+            contents = []
+            if "choices" in data:
+                for choice in data["choices"]:
+                    if "message" in choice and "content" in choice["message"]:
+                        contents.append(choice["message"]["content"])
+            contents_string = "".join(contents)
+            # 返回提取的信息
+            return {
+                "model": model,
+                "citations": citations,
+                "contents": contents_string
+            }
+        
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON format"}
+        except Exception as e:
+            return {"error": str(e)}
+    @staticmethod
+    def extract_json_from_content(text):
+        """
+        从文本中提取并解析JSON对象
+        
+        参数:
+            text (str): 包含JSON对象的文本
+        
+        返回:
+            dict: 解析后的JSON对象，如果解析失败返回None
+        """
+        dict_pattern = r'```json\s*([\s\S]*?)\s*```'
+        match = re.search(dict_pattern, text)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError as e:
+                print("match",match)
+                print("JSON解析失败:", e)
+                return None
+        else:
+            print("未找到 ```json 和 ``` 标记中的 JSON 对象。")
+            return None
+    @staticmethod
+    # markdown table format
+    def write_to_database(text):
+        # 替换 \n\n 为两个空行，段落更清晰
+        if text:
+            text = text.replace("\\n\\n", "\n\n")
+            # 替换 \n 为实际换行
+            text = text.replace("\\n", "\n")
+        return text
 
 
 class SearchFactory:
@@ -258,5 +318,5 @@ if __name__ == '__main__':
     
     # 测试Perplexity搜索
     print("\n测试Perplexity搜索:")
-    perplexity_result = perform_search("is Aciclovir explicit Genotoxicity toxicity (yes/no/unknown)?")
+    perplexity_result = perform_search("is Aciclovir explicit Genotoxicity toxicity yes/no/unknown?")
     print(json.dumps(perplexity_result, ensure_ascii=False, indent=2))

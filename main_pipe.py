@@ -79,7 +79,7 @@ import F3
 import F4
 import F5
 import other_factors
-import calculate_a_factor
+import alpha_factor
 
 class ChemicalInfoProvider(InfoProvider):
     def process(self, drug_info: DrugInfo) -> DrugInfo:
@@ -269,7 +269,7 @@ class AlphaFactorCalculator(InfoProvider):
             new_route = drug_info.data['new_route']
             route = drug_info.route
             
-            json_data = calculate_a_factor.a_factor(name, new_route, route)
+            json_data = alpha_factor.a_factor(name, new_route, route)
             data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
             
             if data_dict.get('status') == 'success':

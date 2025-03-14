@@ -1,59 +1,9 @@
 import json
 from utils.search_utils import perform_search
-import pandas as pd
-import numpy as np
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-import re
+from utils.search_utils import PerplexitySearch
 import json
 # especial for daily_med need to upgrade
-def extract_json_from_text(text):
-        """
-        从文本中提取并解析JSON对象
-        
-        参数:
-            text (str): 包含JSON对象的文本
-        
-        返回:
-            dict: 解析后的JSON对象，如果解析失败返回None
-        """
-        dict_pattern = r'```json\s*([\s\S]*?)\s*```'
-        match = re.search(dict_pattern, text)
-        if match:
-            try:
-                return json.loads(match.group(1))
-            except json.JSONDecodeError as e:
-                print("match",match)
-                print("JSON解析失败:", e)
-                return None
-        else:
-            print("未找到 ```json 和 ``` 标记中的 JSON 对象。")
-            return None
-def extract_json_data(data):
-    try:
-        # 提取所需信息
-        model = data.get("model", "")
-        citations = data.get("citations", [])
-        # 提取所有content
-        contents = []
-        if "choices" in data:
-            for choice in data["choices"]:
-                if "message" in choice and "content" in choice["message"]:
-                    contents.append(choice["message"]["content"])
-        contents_string = "".join(contents)
-        # 返回提取的信息
 
-        return {
-            "model": model,
-            "citations": citations,
-            "contents": contents_string
-        }
-    
-    except json.JSONDecodeError:
-        return {"error": "Invalid JSON format"}
-    except Exception as e:
-        return {"error": str(e)}
 
 regulation_prompt="""
 # Task: Deep Search and Extract the "%s" toxicity information for the drug active ingredient: %s
@@ -100,7 +50,6 @@ When sources from the same level conflict:
 
 """
 
-import json
 
 def process_toxicity(ingredient, toxicity_type="Genotoxicity"):
     """
@@ -135,13 +84,13 @@ def process_toxicity(ingredient, toxicity_type="Genotoxicity"):
         result_json = perform_search(searchword)
         # 确保result_json是有效的JSON字符串
         result_json = json.loads(result_json) if isinstance(result_json, str) else result_json
-        
         result["GAI_original"] = result_json
-        # 解析搜索结果
-        api_result = extract_json_data(result_json)
+        # 解析搜索结果 (后处理方法)
+        api_result = PerplexitySearch.extract_json_data(result_json)
+
         result["citation"] = api_result.get("citations", "")
-        # 提取内容
-        content_json = extract_json_from_text(api_result.get("contents", ""))
+        # 提取内容 (后处理方法)
+        content_json = PerplexitySearch.extract_json_from_content(api_result.get("contents", ""))
         
         # 填充结果字段
         result["ingredient_name"] = content_json.get("ingredient_name","")
