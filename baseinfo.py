@@ -1,12 +1,9 @@
 import utils.PubChem as PubChem
 import json
-# from utils.WebSearch import SearchWithCache
-# searcher = SearchWithCache(cache_path="./cached")
-from utils.perplexity_AI_search import PerplexityWithCache
 from utils.llm_utils import AITEP
-perplexity_api = PerplexityWithCache()
+from utils.search_utils import perform_search
 ai = AITEP()
-def get_chemical_info(name):
+def get_chemical_info(name,search_method="perplexity"):
     """
     获取化学物质的基本信息，优先使用PubMed，如果失败则使用网络搜索
     
@@ -58,7 +55,7 @@ def get_chemical_info(name):
                 break
         # 如果有空缺的值，使用搜索补充
         if has_missing_values:
-            search_result=_search_chemical_info(name, default_result)
+            search_result=_search_chemical_info(name,search_method, default_result)
             if search_result.get("status") == "success":
                 default_result = search_result
     except Exception as e:
@@ -70,7 +67,7 @@ def get_chemical_info(name):
     return json.dumps(default_result, ensure_ascii=False)
 
 # AI搜索
-def _search_chemical_info(name, default_result):
+def _search_chemical_info(name,search_method, default_result):
     """
     使用网络搜索获取化学物质信息的辅助函数
     
@@ -88,8 +85,8 @@ def _search_chemical_info(name, default_result):
         """
         
         # 执行搜索
-        # json_data = searcher.search(search_prompt)
-        json_data = perplexity_api.search(search_prompt)
+
+        json_data = perform_search(search_prompt, search_method)
         data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
         default_result["AI_search_results"] = data_dict
         # 如果搜索有结果，使用AI处理

@@ -1,13 +1,9 @@
 
 import json
-# from utils.WebSearch import SearchWithCache
-from utils.perplexity_AI_search import PerplexityWithCache
-
-# searcher = SearchWithCache(cache_path="./cached")
-perplexity_api = PerplexityWithCache()
+from utils.search_utils import perform_search
 from utils.llm_utils import AITEP
 ai = AITEP()
-def get_pharmacokinetics(name):
+def get_pharmacokinetics(name,searchmethod="perplexity"):
     """
     获取药物的药代动力学和其他基本信息
     
@@ -49,8 +45,8 @@ def get_pharmacokinetics(name):
         for keyword in base_info_keywords:
             try:
                 search_prompt = f'search the drug {name} for {keyword} information'
-                # json_data = searcher.search(search_prompt)
-                json_data = perplexity_api.search(search_prompt)
+                   # 执行搜索
+                json_data = perform_search(search_prompt, searchmethod)
                 # 确保json_data是有效的JSON字符串
                 if not json_data:
                     print(f"Empty search result for {search_prompt}")

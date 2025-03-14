@@ -1,8 +1,8 @@
 import requests
 import json
 import re
-from utils.perplexity_AI_search import PerplexityWithCache
 from bs4 import BeautifulSoup
+from utils.search_utils import perform_search
 import pandas as pd
 def extract_json_from_text(text):
         """
@@ -29,9 +29,6 @@ def extract_json_from_text(text):
 
 def extract_json_data(data):
     try:
-        # 解析JSON字符串
-        data = json.loads(data)
-        
         # 提取所需信息
         model = data.get("model", "")
         citations = data.get("citations", [])
@@ -110,7 +107,7 @@ Error examples:
 - Clinical Critical Effects not using specified sentence structure
 
 """
-
+# markdown table format
 def write_to_database(text):
     # 替换 \n\n 为两个空行，段落更清晰
     if text:
@@ -153,9 +150,9 @@ def clinical(ingredient, route):
         searchword = prompt % (ingredient, route)
 
         # 调用API获取搜索结果
-        perplexity_api = PerplexityWithCache()
-        result_json = perplexity_api.search(searchword)
-        
+        result_json = perform_search(searchword)
+        # 确保result_json是有效的JSON字符串
+        result_json = json.loads(result_json) if isinstance(result_json, str) else result_json
         # 解析搜索结果
         api_result = extract_json_data(result_json)
         
