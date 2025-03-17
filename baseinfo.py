@@ -149,4 +149,4 @@ Expected output format:
     return default_result
 
 if __name__ == "__main__":
-    print(get_chemical_info("Turpentine Oil"))
+    print(get_chemical_info("Papain"))

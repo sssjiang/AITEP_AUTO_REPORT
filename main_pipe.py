@@ -428,10 +428,24 @@ if __name__ == '__main__':
     
     # 可选：移除不需要的处理器
     # processor.remove_processor("HazardInfoProvider")
-    # processor.remove_processor("ChemicalInfoProvider")
     # 处理药物
-    result = processor.process_drug("Myrtol", "Oral", "B00088", "402")
+    # result = processor.process_drug("Papain", "Oral", "B00088", "402")
+    import pandas as pd
+    df = pd.read_excel('APID_with_temple2.xlsx')
+    # 读取df中每一行的数据
+    result_list = []
+    for index, row in df.iterrows():
+        # 读取每一行的数据
+        drug_name = row['ingredient']
+        route = row['route']
+        APID = row['APID']
+        api_id = row['id']
+        # 处理药物
+        result = processor.process_drug(drug_name, route, APID, api_id)
+        result_list.append(result)
+    # 保存结果到jsonl文件中
+    with open('report_result.jsonl', 'w') as f:
+        for result in result_list:
+            f.write(json.dumps(result,ensure_ascii=False)+'\n')
     
-    # 保存结果
-    processor.save_result(result, filename='report_result_2.json')
 

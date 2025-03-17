@@ -138,7 +138,87 @@
 
 ## 系统架构图
 
-![系统架构图](System_Architecture_Diagram.svg)
+```mermaid
+flowchart TB
+  %% 定义节点样式类
+  classDef core fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+  classDef interface fill:#e1d5e7,stroke:#9673a6,stroke-width:2px
+  classDef provider fill:#d5e8d4,stroke:#82b366,stroke-width:2px
+  classDef calculator fill:#ffe6cc,stroke:#d79b00,stroke-width:2px
+  classDef data fill:#fff2cc,stroke:#d6b656,stroke-width:2px
+  classDef event fill:#f8cecc,stroke:#b85450,stroke-width:2px
+
+  %% 主要组件
+  User["用户/客户端"]
+  DrugProcessor["DrugProcessor<br>药物信息处理类"]:::core
+  Pipeline["Pipeline<br>处理管道"]:::core
+  EventBus["EventBus<br>事件总线"]:::event
+  InfoProvider["InfoProvider<br>处理器接口<br>《接口》"]:::interface
+  DrugInfo["DrugInfo<br>药物信息数据类"]:::data
+  ResultStorage[("处理结果<br>JSON文件")]
+
+  %% 处理器实现
+  ChemicalInfoProvider["ChemicalInfoProvider<br>化学信息处理器"]:::provider
+  PharmacyInfoProvider["PharmacyInfoProvider<br>药剂学信息处理器"]:::provider
+  ClinicalInfoProvider["ClinicalInfoProvider<br>临床信息处理器"]:::provider
+  HazardInfoProvider["HazardInfoProvider<br>危害信息处理器"]:::provider
+  PoDCalculator["PoDCalculator<br>PoD值计算器"]:::calculator
+  FactorsCalculator["FactorsCalculator<br>因子计算器"]:::calculator
+  AlphaFactorCalculator["AlphaFactorCalculator<br>α因子计算器"]:::calculator
+
+  %% 外部API
+  ExternalAPI["外部API模块<br>baseinfo/pharmacy/Clinical/hazards等"]
+
+  %% 处理流程子图
+  subgraph 处理流程
+      step1["1. 化学信息处理"]
+      step2["2. 药剂学信息处理"]
+      step3["3. 临床信息处理"]
+      step4["4. 危害信息处理"]
+      step5["5. PoD值计算"]
+      step6["6. 因子计算"]
+      step7["7. α因子计算"]
+
+      step1 --> step2
+      step2 --> step3
+      step3 --> step4
+      step4 --> step5
+      step5 --> step6
+      step6 --> step7
+  end
+
+  %% 连接关系
+  User -- "process_drug(name, route)" --> DrugProcessor
+  DrugProcessor -- "创建" --> DrugInfo
+  DrugProcessor -- "初始化" --> Pipeline
+  DrugProcessor -- "使用" --> EventBus
+  DrugProcessor -- "save_result()" --> ResultStorage
+  Pipeline -- "包含" --> EventBus
+  Pipeline -- "添加步骤" --> InfoProvider
+  Pipeline -- "处理" --> DrugInfo
+  Pipeline -. "执行" .-> 处理流程
+
+  %% 事件总线反馈
+  EventBus -. "发布/订阅事件" .-> DrugProcessor
+
+  %% 接口实现关系
+  InfoProvider -. "实现" .-> ChemicalInfoProvider
+  InfoProvider -. "实现" .-> PharmacyInfoProvider
+  InfoProvider -. "实现" .-> ClinicalInfoProvider
+  InfoProvider -. "实现" .-> HazardInfoProvider
+  InfoProvider -. "实现" .-> PoDCalculator
+  InfoProvider -. "实现" .-> FactorsCalculator
+  InfoProvider -. "实现" .-> AlphaFactorCalculator
+
+  %% 外部API调用
+  ChemicalInfoProvider -- "调用" --> ExternalAPI
+  PharmacyInfoProvider -- "调用" --> ExternalAPI
+  ClinicalInfoProvider -- "调用" --> ExternalAPI
+  HazardInfoProvider -- "调用" --> ExternalAPI
+  PoDCalculator -- "调用" --> ExternalAPI
+  FactorsCalculator -- "调用" --> ExternalAPI
+  AlphaFactorCalculator -- "调用" --> ExternalAPI
+```
 
 ### 核心组件
 

@@ -155,7 +155,7 @@ def all_toxicities(ingredient):
     
 if __name__ == "__main__":
     # 测试
-    ingredient = "Abacavir"
+    ingredient = "Kaolin"
     result = all_toxicities(ingredient)
     print(type(result))
     print(result)
