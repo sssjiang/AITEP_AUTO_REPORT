@@ -36,7 +36,7 @@
 
 ### 管道处理流程
 
-`pipeline.process(drug_info)`方法会按顺序执行每个步骤：
+`pipeline.process(drug_info)`方法会按顺序执行每个步骤(before 和 after 暂未注册相关回调函数，带扩展区域)：
 
 1. **ChemicalInfoProvider 处理**：
    - 发布`before_ChemicalInfoProvider`事件
