@@ -9,7 +9,7 @@ import F3
 import F4
 import F5
 import other_factors
-import calculate_a_factor
+import alpha_factor
 class DrugProcessor:
     """药物信息处理类，封装了药物信息获取和分析的所有功能"""
     
@@ -176,7 +176,7 @@ class DrugProcessor:
     def calculation_a_factor(self,name,new_route,route)->dict:
         """计算α因子"""
         try:
-            json_data = calculate_a_factor.a_factor(name,new_route,route)
+            json_data = alpha_factor.a_factor(name,new_route,route)
             data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
             
             if data_dict.get('status') == 'success':

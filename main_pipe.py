@@ -428,7 +428,7 @@ if __name__ == '__main__':
     
     # 可选：移除不需要的处理器
     # processor.remove_processor("HazardInfoProvider")
-    processor.remove_processor("ChemicalInfoProvider")
+    # processor.remove_processor("ChemicalInfoProvider")
     # 处理药物
     result = processor.process_drug("Myrtol", "Oral", "B00088", "402")
     
