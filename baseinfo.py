@@ -44,25 +44,36 @@ def get_chemical_info(name,search_method="perplexity"):
         if pubmed_result.get("status") == "success":
             # 更新化学物质信息字段
             for key in pubmed_result.keys():
-                if key not in ["status", "message"] and key in pubmed_result:
+                if key not in ["status", "message"] and key in default_result:
                     default_result[key] = pubmed_result[key]
+        else:
+            # 记录pubmed错误信息
+            default_result["message"] = pubmed_result["message"]
     
          # 检查是否有空缺的值("")
         has_missing_values = False
         for key, value in default_result.items():
-            if key not in ["status", "message", "AI_search_results", "GAI_original"] and value == "":
+            if key not in ["status", "message", "AI_search_results", "GAI_original"] and value == "" or value == None:
                 has_missing_values = True
                 break
         # 如果有空缺的值，使用搜索补充
         if has_missing_values:
-            search_result=_search_chemical_info(name,search_method, default_result)
-            if search_result.get("status") == "success":
-                default_result = search_result
+            AI_search_result=default_result.copy()
+            AI_search_result=_search_chemical_info(name,search_method, AI_search_result)
+            if AI_search_result.get("status") == "success":
+                default_result = AI_search_result
+            else:
+                # 记录AI搜索错误信息
+                default_result["message"] =default_result["message"] + " " + AI_search_result["message"]
+
+        # 判断pubmed_result和AI_search_result是否都失败
+        if pubmed_result.get("status") == "error" and AI_search_result.get("status") == "error":
+            default_result["status"] = "error"
     except Exception as e:
         # 处理任何异常，尝试备用方法
         print(f"Error in PubMed process: {str(e)}")
         default_result["status"] = "error"
-        default_result["message"] = f"Error in PubMed process: {str(e)}"
+        default_result["message"] = f"Error in all basic info process: {str(e)}"
     # 返回JSON字符串
     return json.dumps(default_result, ensure_ascii=False)
 
@@ -165,6 +176,7 @@ Based on the search results in JSON format above, extract the basic information 
                     default_result[key] = ai_response[key]
         else:
             default_result["message"] = f"{name}: No search results"
+            default_result["status"] = "error"
     
     except Exception as e:
         default_result["status"] = "error"

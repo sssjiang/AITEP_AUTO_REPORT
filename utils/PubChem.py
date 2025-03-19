@@ -263,7 +263,6 @@ def extract_IUPAC_Name(data):
         print(f"提取InchI Key时发生错误: {e}")
         return None
 
-
 def extract_ATC_Code(data):
     """提取ATC Code"""
     try:
@@ -282,24 +281,32 @@ def extract_ATC_Code(data):
         print(f"提取ATC Code时发生错误: {e}")
         return None
 
+def extract_name(data):
+    """提取chemical name"""
+    try:
+        name = data.get('Record', {}).get('RecordTitle', [])
+        return name
+    except Exception as e:
+        print(f"提取chemical name时发生错误: {e}")
+        return None
+       
+                                 
 # 单个:化合物入口函数 
 
 
-def process_chemical(name, apid=None):
+def process_chemical(name):
     """
     处理单个化学物质，获取其CID/SID和相关信息
-    
+    durg_name: 化学物质名称 用于验证提取的信息是否为该化学物质
     参数:
         name (str): 化学物质名称
-        apid (str, optional): 化学物质的APID
         
     返回:
         str: 包含处理结果的JSON字符串
     """
-   
+    
     result={
-    'APID': apid, 
-    'Name': name,
+    'drug_name': "",
     'CAS Number':"",
     'Molecular Weight':"",
     'Molecular Formula':"",
@@ -328,6 +335,7 @@ def process_chemical(name, apid=None):
             CAS_name = extract_first_cas(compound_data)
             weight = extract_Weight(compound_data)
             formular = extract_Molecular_Formula(compound_data)
+            result['drug_name'] = extract_name(compound_data)
             result['CAS Number'] = CAS_name
             result['Molecular Weight'] = weight
             result['Molecular Formula'] = formular
