@@ -93,18 +93,23 @@ def _search_chemical_info(name,search_method, default_result):
         if data_dict and len(data_dict) > 0:
             # 构建AI提示
             prompt_template = """
+# Drug Information Extraction Prompt
+
+## Input Content
 Content Start
 ```json
 {{RESULTS}}
 ```
 Content End
 
-Based on the search results in JSON format above, extract the basic information for drug name (`drug_name`). Only include fields with actual values; use empty strings or empty arrays for missing information.
+## Task Description
 
-Input:
+Based on the search results in JSON format above, extract the basic information for drug name (`drug_name`). Only include fields with actual values; use empty strings or empty arrays for missing information. If Description, Pharmacotherapeutic Group, Appearance, Solubility, or ATC Code information is missing from the source data, use the AI model's knowledge to automatically generate this information based on the (`drug_name`).
+
+## Input Parameter
 - `drug_name`: {{DRUG_NAME}}
 
-Expected output format:
+## Expected output format:
 ```json
 {
     "drug_name": "Paracetamol",
@@ -123,6 +128,25 @@ Expected output format:
     "Solubility": "Slightly soluble in water (14 mg/mL at 25°C)"
 }
 ```
+
+## Field Descriptions
+
+| Field                       | Description                                                  |
+| --------------------------- | ------------------------------------------------------------ |
+| `drug_name`                 | The primary or generic name of the drug                      |
+| `Synonyms`                  | List of alternative names or brand names for the drug        |
+| `CAS Number`                | Chemical Abstracts Service registry number, used to uniquely identify chemical substances |
+| `Molecular Formula`         | The molecular formula of the drug, representing its chemical composition |
+| `Molecular Weight`          | The molecular weight of the drug, typically in g/mol         |
+| `Smiles`                    | Simplified Molecular Input Line Entry System (SMILES), a string representation for describing chemical structure |
+| `InchI Key`                 | The hashed version of the International Chemical Identifier (InChI), used for unique identification of chemical structures |
+| `reference_links`           | List of reference links containing information about the drug |
+| `IUPAC Name`                | Systematic chemical name according to International Union of Pure and Applied Chemistry (IUPAC) nomenclature |
+| `Description`               | Brief description of the drug, including its main uses and effects (if missing from source data, generate using AI knowledge based on drug name) |
+| `ATC Code`                  | Anatomical Therapeutic Chemical classification system code for drug classification (if missing from source data, generate using AI knowledge based on drug name) |
+| `Pharmacotherapeutic Group` | The pharmacological therapeutic category to which the drug belongs (if missing from source data, generate using AI knowledge based on drug name) |
+| `Appearance`                | Description of the physical appearance of the drug (if missing from source data, generate using AI knowledge based on drug name) |
+| `Solubility`                | Information about the drug's solubility in different solvents (if missing from source data, generate using AI knowledge based on drug name) |
 """
             
             # 替换提示中的占位符
@@ -131,12 +155,13 @@ Expected output format:
             
             # 调用AI处理
             ai_response = ai.run_llm(file_id=None, llm_model="qwen-plus", prompt=formatted_prompt)
+            print(ai_response)
             default_result["GAI_original"] = ai_response
- 
+
             # 更新空缺的值
             ai_response=ai_response.get("data")
-            for key in ai_response.keys():
-                if key not in ["status", "message"] and key in default_result and default_result[key] == "":
+            for key in ai_response.keys(): 
+                if key not in ["status", "message"] and key in default_result and default_result[key] == "" or default_result[key] == None:
                     default_result[key] = ai_response[key]
         else:
             default_result["message"] = f"{name}: No search results"
@@ -149,4 +174,4 @@ Expected output format:
     return default_result
 
 if __name__ == "__main__":
-    print(get_chemical_info("Papain"))
+    print(get_chemical_info("Methylephedrine"))

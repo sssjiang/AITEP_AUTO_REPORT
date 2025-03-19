@@ -171,7 +171,120 @@ def extract_Molecular_Formula(data):
     except Exception as e:
         print(f"提取Molecular Formula时发生错误: {e}")
         return None
+def extract_Smiles(data):
+    """提取SMILES"""
+    try:
+        sections = data.get('Record', {}).get('Section', [])
+        for section in sections:
+            if section.get('TOCHeading') == "Names and Identifiers":
+                for subsection in section.get('Section', []):
+                    if subsection.get('TOCHeading') == "Computed Descriptors":
+                        subsubsection= subsection.get('Section', [])
+                        for info in subsubsection:
+                            if info.get('TOCHeading') == "SMILES":
+                                 # 获取StringWithMarkup中的第一个String值
+                                string_with_markup = info.get('Information', {})[0].get('Value', []).get('StringWithMarkup', [])
+                                print(string_with_markup)
+                                if string_with_markup:
+                                    return string_with_markup[0].get('String')
+                                 
+        return None
+    except Exception as e:
+        print(f"提取SMILES时发生错误: {e}")
+        return None
+def extract_synonyms(data):
+    """提取Synonyms"""
+    try:
+        sections = data.get('Record', {}).get('Section', [])
+        for section in sections:
+            if section.get('TOCHeading') == "Names and Identifiers":
+                for subsection in section.get('Section', []):
+                    if subsection.get('TOCHeading') == "Synonyms":
+                        # 获取所有Synonyms
+                        subsection=subsection.get('Section', [])
+                        # 如果subsection是一个列表取第一个
+                        if isinstance(subsection, list):
+                            subsection_1 = subsection[0]
+                        else:
+                            subsection_1 = subsection
+                        synonyms = []
+                        infos=subsection_1.get('Information', [])
+                        for info in infos: 
+                            # 获取StringWithMarkup中的所有String值
+                            string_with_markup = info.get('Value', {}).get('StringWithMarkup', [])
+                            for string in string_with_markup:
+                                synonyms.append(string.get('String'))
+                        # 取前10个Synonyms
+                        return synonyms[:10]
+        return None
+    except Exception as e:
+        print(f"提取Synonyms时发生错误: {e}")
+        return None
+def extract_InchI_Key(data):
+    """提取InchI Key"""
+    try:
+        sections = data.get('Record', {}).get('Section', [])
+        for section in sections:
+            if section.get('TOCHeading') == "Names and Identifiers":
+                for subsection in section.get('Section', []):
+                    if subsection.get('TOCHeading') == "Computed Descriptors":
+                        subsubsection= subsection.get('Section', [])
+                        for info in subsubsection:
+                            if info.get('TOCHeading') == "InChIKey":
+                                 # 获取StringWithMarkup中的第一个String值
+                                string_with_markup = info.get('Information', {})[0].get('Value', []).get('StringWithMarkup', [])
+                                print(string_with_markup)
+                                if string_with_markup:
+                                    return string_with_markup[0].get('String')
+                                 
+        return None
+    except Exception as e:
+        print(f"提取InchI Key时发生错误: {e}")
+        return None
+def extract_IUPAC_Name(data):
+    """提取IUPAC Name"""
+    try:
+        sections = data.get('Record', {}).get('Section', [])
+        for section in sections:
+            if section.get('TOCHeading') == "Names and Identifiers":
+                for subsection in section.get('Section', []):
+                    if subsection.get('TOCHeading') == "Computed Descriptors":
+                        subsubsection= subsection.get('Section', [])
+                        for info in subsubsection:
+                            if info.get('TOCHeading') == "IUPAC Name":
+                                 # 获取StringWithMarkup中的第一个String值
+                                string_with_markup = info.get('Information', {})[0].get('Value', []).get('StringWithMarkup', [])
+                                print(string_with_markup)
+                                if string_with_markup:
+                                    return string_with_markup[0].get('String')
+                                 
+        return None
+    except Exception as e:
+        print(f"提取InchI Key时发生错误: {e}")
+        return None
+
+
+def extract_ATC_Code(data):
+    """提取ATC Code"""
+    try:
+        sections = data.get('Record', {}).get('Section', [])
+        for section in sections:
+            if section.get('TOCHeading') == "Pharmacology and Biochemistry":
+                for subsection in section.get('Section', []):
+                    if subsection.get('TOCHeading') == "ATC Code":
+                        # 获取所有ATC Codes
+                        atc_codes = []
+                        for info in subsection.get('Information', []):
+                            atc_codes.append(info.get('Value', {}).get('StringWithMarkup', [])[0].get('String'))
+                        return atc_codes[0]
+        return None
+    except Exception as e:
+        print(f"提取ATC Code时发生错误: {e}")
+        return None
+
 # 单个:化合物入口函数 
+
+
 def process_chemical(name, apid=None):
     """
     处理单个化学物质，获取其CID/SID和相关信息
@@ -183,8 +296,22 @@ def process_chemical(name, apid=None):
     返回:
         str: 包含处理结果的JSON字符串
     """
-    result = {'APID': apid, 'Name': name, 'ID': None, 'ID_Type': None, 'CAS_name': None, 'Smiles': None, 'weight': None, 'formular': None, 'status': 'success', 'message': None}
-    
+   
+    result={
+    'APID': apid, 
+    'Name': name,
+    'CAS Number':"",
+    'Molecular Weight':"",
+    'Molecular Formula':"",
+    'Smiles':"",
+    'Synonyms':"",
+    'InchI Key':"",
+    'IUPAC Name':"",
+    'ATC Code':"",
+    'status': 'success',
+    'message': "",
+    'reference_links': ""
+    }
     print(f"\n处理化学物质: {name}")
     
     # 首先尝试通过关键词获取CID
@@ -204,9 +331,16 @@ def process_chemical(name, apid=None):
             result['CAS Number'] = CAS_name
             result['Molecular Weight'] = weight
             result['Molecular Formula'] = formular
+            result['Smiles'] = extract_Smiles(compound_data)
+            result['Synonyms'] = extract_synonyms(compound_data)
+            result['InchI Key'] = extract_InchI_Key(compound_data)
+            result['IUPAC Name'] = extract_IUPAC_Name(compound_data)
+            result['ATC Code'] = extract_ATC_Code(compound_data)
             print(f"找到描述: {CAS_name[:100]}..." if CAS_name else "未找到描述CAS")
             print(f"找到描述: {weight[:100]}..." if weight else "未找到描述weight")
             print(f"找到描述: {formular[:100]}..." if formular else "未找到描述formular")
+            print(f"找到描述: {result['Smiles'][:100]}..." if result['Smiles'] else "未找到描述Smiles")
+
     else:
         print(f"未找到'{name}'的CID，尝试查询SID...")
         # 如果没有CID，尝试获取SID
@@ -232,6 +366,6 @@ def process_chemical(name, apid=None):
     return json.dumps(result, ensure_ascii=False)
 
 if __name__ == "__main__":
-    name="aspirin"
+    name="Dimethyloxosilane"
     print(process_chemical(name))
     #file_path = "chemicals.xlsx"

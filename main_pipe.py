@@ -52,7 +52,7 @@ class Pipeline:
                 result.data['errors'] = result.data.get('errors', [])
                 result.data['errors'].append(f"Error in pipeline step {step.provider_name}: {str(e)}")
                 self.event_bus.publish("pipeline_error", {"step": step.provider_name, "error": str(e)})
-        
+
         return result
 
 class EventBus:
@@ -105,6 +105,9 @@ class ChemicalInfoProvider(InfoProvider):
                     "Solubility": data_dict.get('Solubility'),
                     "reference_links": data_dict.get('reference_links')
                 }
+            else:
+                drug_info.data['errors'] = drug_info.data.get('errors', [])
+                drug_info.data['errors'].append(data_dict.get('message', "Unknown"))
         except Exception as e:
             drug_info.data['errors'] = drug_info.data.get('errors', [])
             drug_info.data['errors'].append(f"Error in ChemicalInfoProvider: {str(e)}")
@@ -126,6 +129,9 @@ class PharmacyInfoProvider(InfoProvider):
                     "Mechanism of Action": data_dict.get('Mechanism of Action'),
                     "reference_links": data_dict.get('reference_links')
                 }
+            else:
+                drug_info.data['errors'] = drug_info.data.get('errors', [])
+                drug_info.data['errors'].append(data_dict.get('message', "Unknown"))
         except Exception as e:
             drug_info.data['errors'] = drug_info.data.get('errors', [])
             drug_info.data['errors'].append(f"Error in PharmacyInfoProvider: {str(e)}")
@@ -149,6 +155,9 @@ class ClinicalInfoProvider(InfoProvider):
                 drug_info.data['clinical_info'] = clinical_data
                 drug_info.data['dosage_detail'] = data_dict.get('dosage_detail')
                 drug_info.data['new_route'] = data_dict.get('route')
+            else:
+                drug_info.data['errors'] = drug_info.data.get('errors', [])
+                drug_info.data['errors'].append(data_dict.get('message', "Unknown error"))
         except Exception as e:
             drug_info.data['errors'] = drug_info.data.get('errors', [])
             drug_info.data['errors'].append(f"Error in ClinicalInfoProvider: {str(e)}")
@@ -171,8 +180,10 @@ class HazardInfoProvider(InfoProvider):
                         "param3": row.get('result_detail'),
                         "reference_links": row.get('reference_links')
                     })
-            
-            drug_info.data['hazard_info'] = data_output
+                drug_info.data['hazard_info'] = data_output
+            else:
+                drug_info.data['errors'] = drug_info.data.get('errors', [])
+                drug_info.data['errors'].append(data_dict.get('message', "Unknown error"))
         except Exception as e:
             drug_info.data['errors'] = drug_info.data.get('errors', [])
             drug_info.data['errors'].append(f"Error in HazardInfoProvider: {str(e)}")
@@ -427,11 +438,16 @@ if __name__ == '__main__':
     # processor.add_processor(CustomProcessor())
     
     # 可选：移除不需要的处理器
-    # processor.remove_processor("HazardInfoProvider")
+    processor.remove_processor("ClinicalInfoProvider")
+    processor.remove_processor("HazardInfoProvider")
+    processor.remove_processor("PoDCalculator")
+    processor.remove_processor("FactorsCalculator")
+    processor.remove_processor("AlphaFactorCalculator")
+
     # 处理药物
     # result = processor.process_drug("Papain", "Oral", "B00088", "402")
     import pandas as pd
-    df = pd.read_excel('APID_with_temple2.xlsx')
+    df = pd.read_excel('APID_A_2.xlsx')
     # 读取df中每一行的数据
     result_list = []
     for index, row in df.iterrows():
@@ -444,7 +460,7 @@ if __name__ == '__main__':
         result = processor.process_drug(drug_name, route, APID, api_id)
         result_list.append(result)
     # 保存结果到jsonl文件中
-    with open('report_result.jsonl', 'w') as f:
+    with open('report_result_base_chemical.jsonl', 'w') as f:
         for result in result_list:
             f.write(json.dumps(result,ensure_ascii=False)+'\n')
     
