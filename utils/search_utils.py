@@ -4,6 +4,7 @@ import hashlib
 import requests
 import configparser
 import re
+from googleapiclient.discovery import build
 class BaseSearchWithCache:
     """搜索引擎的基类，提供缓存功能"""
     
@@ -41,6 +42,8 @@ class BaseSearchWithCache:
         搜索并缓存结果（子类需要实现）
         """
         raise NotImplementedError("子类必须实现search方法")
+
+
 
 
 class BochaSearch(BaseSearchWithCache):
@@ -268,6 +271,78 @@ class PerplexitySearch(BaseSearchWithCache):
         return text
 
 
+class GoogleSearch(BaseSearchWithCache):
+    """使用Google Custom Search API进行搜索"""
+    
+    def __init__(self, cache_path='./Google_cached'):
+        """
+        初始化Google搜索类
+        :param cache_path: 缓存文件路径
+        """
+        super().__init__(cache_path)
+        # 读取配置文件
+        config = configparser.ConfigParser()
+        config.read('api.ini')
+        self.api_key = config['google']['API_KEY']
+        self.cse_id = config['google']['CSE_ID']
+
+    def search(self, query, force_refresh=False, total_results=10, num=10, **kwargs):
+        """
+        搜索Google并缓存结果，支持分页查询
+        :param query: 搜索关键词
+        :param force_refresh: 是否强制刷新缓存
+        :param total_results: 总共需要返回的条目数（默认30）
+        :param num: 每次查询返回的条目数（默认10，最大100）
+        :param kwargs: 其他搜索参数
+        :return: 搜索结果
+        """
+        all_items = []
+        start = 1  # 查询的起始位置
+
+        while len(all_items) < total_results:
+            cache_key = self._generate_cache_key(f"{query}_start{start}_num{num}")
+
+            # 如果缓存中存在结果且不强制刷新，直接使用缓存结果
+            if not force_refresh:
+                cached_data = self._load_cache(cache_key)
+                if cached_data is not None:
+                    # 如果缓存是字符串形式，转换为列表
+                    if isinstance(cached_data, str):
+                        items = json.loads(cached_data)
+                    # 如果缓存是对象形式，直接使用
+                    else:
+                        items = cached_data
+                    all_items.extend(items)
+                    start += num
+                    continue
+
+            # 调用Google Custom Search API
+            print(f"调用Google Custom Search API搜索，起始位置：{start}，条目数：{num}...")
+            try:
+                service = build("customsearch", "v1", developerKey=self.api_key)
+                res = service.cse().list(q=query, cx=self.cse_id, num=num, start=start, **kwargs).execute()
+                items = res.get('items', [])
+                
+                # 转换为JSON字符串并保存到缓存
+                json_result = json.dumps(items, ensure_ascii=False)
+                self._save_cache(cache_key, json_result)
+                
+                all_items.extend(items)
+                start += num
+            except Exception as e:
+                error_result = {
+                    "status": "error",
+                    "message": str(e),
+                    "query": query
+                }
+                return json.dumps(error_result, ensure_ascii=False)
+
+        # 返回前total_results条结果
+        return json.dumps(all_items[:total_results], ensure_ascii=False)
+
+
+
+
 class SearchFactory:
     """搜索工厂类，用于创建不同的搜索实例"""
     
@@ -283,6 +358,8 @@ class SearchFactory:
             return BochaSearch()
         elif search_method.lower() == "perplexity":
             return PerplexitySearch()
+        elif search_method.lower() == "google":
+            return GoogleSearch()
         else:
             raise ValueError(f"未知的搜索方法: {search_method}")
 
@@ -312,11 +389,17 @@ def perform_search(query, search_method="perplexity", force_refresh=False):
 
 if __name__ == '__main__':
     # 测试Bocha搜索
-    print("测试Bocha搜索:")
-    bocha_result = perform_search("Abacavir", search_method="bocha")
-    print(json.dumps(bocha_result, ensure_ascii=False, indent=2))
+    # print("测试Bocha搜索:")
+    # bocha_result = perform_search("Abacavir", search_method="bocha")
+    # print(json.dumps(bocha_result, ensure_ascii=False, indent=2))
     
     # 测试Perplexity搜索
-    print("\n测试Perplexity搜索:")
-    perplexity_result = perform_search("is Aciclovir explicit Genotoxicity toxicity yes/no/unknown?")
-    print(json.dumps(perplexity_result, ensure_ascii=False, indent=2))
+    # print("\n测试Perplexity搜索:")
+    # perplexity_result = perform_search("is Aciclovir explicit Genotoxicity toxicity yes/no/unknown?")
+    # print(json.dumps(perplexity_result, ensure_ascii=False, indent=2))
+    # 测试Google搜索
+    print("\n测试Google搜索:")
+    
+    # 可设置total_results参数来获取更多结果
+    google_result = perform_search("Abacavir dailymed", search_method="google")
+    print(google_result)
