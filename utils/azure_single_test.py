@@ -23,19 +23,34 @@ USAGE:
     3) BING_CONNECTION_NAME - The connection name of the Bing connection, as found in the 
        "Connected resources" tab in your Azure AI Foundry project.
 """
-
 import os
 from azure.ai.projects import AIProjectClient
 from azure.ai.projects.models import MessageRole, BingGroundingTool
 from azure.identity import DefaultAzureCredential
-# 使用用户名和密码登录
 from azure.identity import ClientSecretCredential
+# 使用示例
+import configparser
+# 读取配置文件
+config = configparser.ConfigParser()
+config.read('api.ini')
+print(config.sections())
+client_id = config['azure']['client_id']
+tenant_id = config['azure']['tenant_id']
+value = config['azure']['value']
+project_connet_string = config['azure']['project_connet_string']
+# 去掉project_connet_string前后的引号
+project_connet_string = project_connet_string[1:-1]
 
-
+# 使用用户名和密码登录
+credential = ClientSecretCredential(
+    tenant_id=tenant_id,
+    client_id=client_id,
+    client_secret=value
+)
 
 project_client = AIProjectClient.from_connection_string(
-    credential=DefaultAzureCredential(),
-    conn_str="eastus2.api.azureml.ms;cf52c86d-3679-41cf-8edd-0acfe6f768db;rg-jasperhellow-8862_ai;jasperhellow-9753",
+    credential=credential,
+    conn_str=project_connet_string
 )
 
 # [START create_agent_with_bing_grounding_tool]
