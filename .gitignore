@@ -14,3 +14,5 @@
 !*.svg
 # 提交md 文件
 !*.md
+# 提交requirements 文件
+!*requirements.txt
