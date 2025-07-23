@@ -271,8 +271,17 @@ class PerplexitySearch(BaseSearchWithCache):
         super().__init__(cache_path)
         # 读取配置文件
         config = configparser.ConfigParser()
-        config.read('api.ini')
-        self.api_key = config['perplexity']['ACCESS_TOKEN']
+        # 获取当前文件所在目录的路径
+        config_path = os.path.join(os.path.dirname(__file__), 'api.ini')
+        config.read(config_path)
+        # print(f"perplexity Config file path: {config_path}")
+        # print(f"perplexity Config sections: {config.sections()}")
+        try:
+            self.api_key = config['perplexity']['ACCESS_TOKEN']
+        except KeyError as e:
+            print(f"Error: Section/key not found in api.ini: {e}")
+            print(f"Available sections: {config.sections()}")
+            raise
 
     def search(self, query, force_refresh=False):
         """
@@ -316,7 +325,7 @@ class PerplexitySearch(BaseSearchWithCache):
             "search_domain_filter": None,
             "return_images": False,
             "return_related_questions": False,
-            "search_recency_filter": "",
+            "search_recency_filter": "year",  # Set to a valid value or remove this line if not needed
             "top_k": 0,
             "stream": False,
             "presence_penalty": 0,

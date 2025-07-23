@@ -40,7 +40,7 @@ def get_chemical_info(name,search_method="perplexity"):
         json_data = PubChem.process_chemical(name)
         pubmed_result = json.loads(json_data) if isinstance(json_data, str) else json_data
         
-        # 将PubMed结果合并到我们的结果结构中
+        # 将Pubchem结果合并到我们的结果结构中
         if pubmed_result.get("status") == "success":
             # 更新化学物质信息字段
             for key in pubmed_result.keys():

@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 from openai import OpenAI
 import configparser
 
+
 # 返回数据类型为dict
 class AITEP:
 
@@ -25,8 +26,17 @@ class AITEP:
         """
         if not api_key:
             config = configparser.ConfigParser()
-            config.read('api.ini')
-            api_key=config['TongYiQianWen']['ACCESS_TOKEN']
+            # 获取当前文件所在目录的路径
+            config_path = os.path.join(os.path.dirname(__file__), 'api.ini')
+            config.read(config_path)
+            # print(f"Config file path: {config_path}")
+            # print(f"Config sections: {config.sections()}")
+            try:
+                api_key = config['TongYiQianWen']['ACCESS_TOKEN']
+            except KeyError as e:
+                print(f"Error: Section/key not found in api.ini: {e}")
+                print(f"Available sections: {config.sections()}")
+                raise
         self.api_key = api_key
         if not base_url:
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"

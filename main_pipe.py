@@ -118,6 +118,7 @@ class PharmacyInfoProvider(InfoProvider):
     def process(self, drug_info: DrugInfo) -> DrugInfo:
         try:
             name = drug_info.drug_name
+            print(name)
             json_data = pharmacy.get_pharmacokinetics(name)
             data_dict = json.loads(json_data) if isinstance(json_data, str) else json_data
             
@@ -138,7 +139,7 @@ class PharmacyInfoProvider(InfoProvider):
         
         return drug_info
 
-class ClinicalInfoProvider_function(InfoProvider):
+class ClinicalInfoProvider(InfoProvider):
     def process(self, drug_info: DrugInfo) -> DrugInfo:
         try:
             name = drug_info.drug_name
@@ -163,12 +164,13 @@ class ClinicalInfoProvider_function(InfoProvider):
             drug_info.data['errors'].append(f"Error in ClinicalInfoProvider: {str(e)}")
         
         return drug_info
-class ClinicalInfoProvider(InfoProvider):
-    # 从APID_A_3_temple.xlsx中读取数据，然后调用Clinical.clinical()函数
+# 特异性功能：从APID_A_3_temple.xlsx中读取数据，然后调用Clinical.clinical()函数
+class ClinicalInfoProvider_function(InfoProvider):
+
     def process(self, drug_info: DrugInfo) -> DrugInfo:
         name = drug_info.drug_name
 
-        df = pd.read_excel('APID_A_3_temple.xlsx')
+        df = pd.read_excel('APID_A_4.xlsx')
         for index, row in df.iterrows():
             if row['ingredient'] == name:
                 json_string=row['Clinical']
@@ -459,7 +461,7 @@ if __name__ == '__main__':
     # processor.add_processor(CustomProcessor())
     
     # 可选：移除不需要的处理器
-    # processor.remove_processor("ClinicalInfoProvider")
+    # processor.remove_processor("ChemicalInfoProvider")
     # processor.remove_processor("HazardInfoProvider")
     # processor.remove_processor("PoDCalculator")
     # processor.remove_processor("FactorsCalculator")
@@ -468,7 +470,8 @@ if __name__ == '__main__':
     # 处理药物
     # result = processor.process_drug("Papain", "Oral", "B00088", "402")
     import pandas as pd
-    df = pd.read_excel('APID_A_3_temple.xlsx')
+    df = pd.read_excel('APID_A_4.xlsx')
+    df=df[1:]
     # df=df.head(1)
     # 读取df中每一行的数据
     result_list = []
@@ -482,7 +485,7 @@ if __name__ == '__main__':
         result = processor.process_drug(drug_name, route, APID, api_id)
         result_list.append(result)
     # 保存结果到jsonl文件中
-    with open('report_result_base_chemical.jsonl', 'w') as f:
+    with open('report_result_base_chemical_A_4.jsonl', 'w') as f:
         for result in result_list:
             f.write(json.dumps(result,ensure_ascii=False)+'\n')
     
